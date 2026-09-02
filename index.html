@@ -275,6 +275,11 @@
       <p>Dieser Link enthält keine gültigen Tauchgangsdaten. Bitte den Link erneut aus der Tauchlogbuch-App anfordern.</p>
     </div>
 
+    <div id="stepInvalid" class="step">
+      <h1>Anfrage nicht mehr gültig</h1>
+      <p>Diese Bestätigungsanfrage wurde zurückgezogen. Bitte die Person, die dich gebeten hat, um einen neuen Link.</p>
+    </div>
+
     <div id="stepSignIn" class="step">
       <h1>Diesen Tauchgang bestätigen</h1>
       <p>Wenn du dabei warst, melde dich kurz mit Google an – deine E-Mail-Adresse wird dabei angezeigt, damit die Bestätigung nachvollziehbar bleibt.</p>
@@ -401,8 +406,6 @@
     document.getElementById('map').remove();
   }
 
-  showStep('stepSignIn');
-
   let idToken = null;
 
   function decodeJwt(token) {
@@ -443,7 +446,32 @@
       text: 'signin_with',
     });
   }
-  initGoogle();
+  // Prueft VOR der Google-Anmeldung, ob diese Verknuepfung beim Worker noch
+  // aktiv ist (siehe Worker-Code) -- eine zurueckgezogene Anfrage soll das
+  // sofort beim Laden zeigen, nicht erst nachdem sich der Tauchpartner
+  // extra angemeldet und "Bestaetigen" versucht hat.
+  async function checkActiveAndProceed() {
+    try {
+      const res = await fetch(
+        WORKER_URL + '?ids=' + encodeURIComponent(linkUuid),
+      );
+      if (res.ok) {
+        const data = await res.json();
+        const entry = data[linkUuid];
+        if (entry && entry.active === false) {
+          showStep('stepInvalid');
+          return;
+        }
+      }
+    } catch (e) {
+      // Bei Netzwerkfehlern optimistisch weitermachen (Anmeldung anbieten)
+      // statt den Nutzer faelschlich zu blockieren -- der Worker prueft
+      // beim eigentlichen Bestaetigen ohnehin nochmal verbindlich.
+    }
+    showStep('stepSignIn');
+    initGoogle();
+  }
+  checkActiveAndProceed();
 
   // Stempel-Foto: wird im Browser auf eine vernuenftige Maximalgroesse
   // herunterskaliert (Original-Handyfotos sind oft 10+ MB, viel groesser
