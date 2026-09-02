@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bestätigung erhalten – Tauchlogbuch</title>
+<meta name="robots" content="noindex" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg: #071310;
+    --glow: #4dd8ff;
+    --glow-soft: rgba(77, 216, 255, 0.16);
+    --text: #ffffff;
+    --text-dim: rgba(255,255,255,0.78);
+    --text-faint: rgba(255,255,255,0.55);
+    --panel: rgba(255,255,255,0.06);
+    --panel-border: rgba(255,255,255,0.12);
+  }
+  *{ box-sizing:border-box; }
+  html,body{
+    margin:0; min-height:100vh;
+    background: radial-gradient(120% 90% at 50% -10%, #0e2c26 0%, var(--bg) 55%);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    display:flex; align-items:center; justify-content:center;
+    padding: 32px 20px;
+  }
+  .box{
+    max-width: 420px;
+    width:100%;
+    text-align:center;
+  }
+  .success-icon{
+    width: 72px; height:72px; border-radius:50%;
+    background: var(--glow-soft);
+    display:flex; align-items:center; justify-content:center;
+    color: var(--glow);
+    font-size: 34px;
+    margin: 0 auto 20px;
+  }
+  h1{ font-size:20px; margin: 0 0 10px; }
+  p{ font-size:14px; line-height:1.6; color: var(--text-dim); margin: 0 0 24px; }
+  .details{
+    text-align:left;
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 14px;
+    padding: 16px 18px;
+    font-size: 13px;
+    line-height: 2;
+  }
+  .details b{ color: var(--text-dim); font-weight:600; }
+  .note{
+    margin-top: 22px;
+    font-size: 12px;
+    color: var(--text-faint);
+    line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="success-icon">✓</div>
+  <h1>Bestätigung erhalten</h1>
+  <p id="intro">Dieser Tauchgang wurde von einem Tauchpartner digital bestätigt.</p>
+  <div class="details" id="details">–</div>
+  <p class="note">Sobald die App diesen Link direkt öffnen kann, wird die Bestätigung automatisch übernommen. Bis dahin bitte die Angaben oben mit der App abgleichen.</p>
+</div>
+
+<script>
+(function () {
+  const params = new URLSearchParams(location.search);
+  const raw = params.get('v');
+  const details = document.getElementById('details');
+  if (!raw) {
+    details.textContent = 'Kein gültiger Bestätigungslink.';
+    return;
+  }
+  try {
+    const decoded = JSON.parse(atob(raw));
+    const p = decoded.payload;
+    const verifiedAt = new Date(p.verifiedAt);
+    details.innerHTML =
+      '<b>Bestätigt von:</b> ' + p.verifiedEmail + '<br/>' +
+      '<b>Zeitpunkt:</b> ' + (isNaN(verifiedAt) ? p.verifiedAt : verifiedAt.toLocaleString('de-DE')) + '<br/>' +
+      '<b>Tauchgang-ID:</b> ' + p.diveUuid + '<br/>' +
+      '<b>Tauchpartner-ID:</b> ' + p.buddyUuid;
+  } catch (e) {
+    details.textContent = 'Bestätigungslink konnte nicht gelesen werden.';
+  }
+})();
+</script>
+</body>
+</html>

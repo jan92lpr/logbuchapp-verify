@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Tauchgang bestätigen – Tauchlogbuch</title>
+<meta name="robots" content="noindex" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  :root{
+    --bg: #071310;
+    --card-bg: #0a1d19;
+    --glow: #4dd8ff;
+    --glow-soft: rgba(77, 216, 255, 0.16);
+    --text: #ffffff;
+    --text-dim: rgba(255,255,255,0.78);
+    --text-faint: rgba(255,255,255,0.55);
+    --divider: rgba(255,255,255,0.22);
+    --panel: rgba(255,255,255,0.06);
+    --panel-border: rgba(255,255,255,0.12);
+    --danger: #ff8a80;
+  }
+  *{ box-sizing: border-box; }
+  html,body{
+    margin:0; padding:0;
+    background: radial-gradient(120% 90% at 50% -10%, #0e2c26 0%, var(--bg) 55%);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    min-height: 100vh;
+  }
+  .page{
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 32px 20px 56px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 28px;
+  }
+  .card{
+    width: 100%;
+    aspect-ratio: 4 / 5;
+    border-radius: 28px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 30px 60px -20px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.06);
+    background: linear-gradient(160deg, #0d2622, #071310);
+  }
+  #map{ position:absolute; inset:0; filter: saturate(0.85) brightness(0.9); }
+  .leaflet-control-attribution{
+    font-size: 9px !important;
+    background: rgba(0,0,0,0.4) !important;
+    color: rgba(255,255,255,0.6) !important;
+  }
+  .leaflet-control-attribution a{ color: rgba(255,255,255,0.8) !important; }
+  .card-gradient{
+    position:absolute; inset:0;
+    background: linear-gradient(to bottom,
+      rgba(0,0,0,0.05) 0%,
+      rgba(0,0,0,0.15) 40%,
+      rgba(4,12,10,0.88) 78%,
+      rgba(4,12,10,0.97) 100%);
+    pointer-events:none;
+  }
+  .card-content{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column;
+    padding: 30px 26px 24px;
+    pointer-events:none;
+  }
+  .site-name{
+    font-size: 26px;
+    font-weight: 800;
+    line-height: 1.15;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.5);
+  }
+  .dive-date{
+    margin-top: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-dim);
+    text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  }
+  .stat-grid{
+    margin-top: auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px 0;
+  }
+  .stat{
+    display:flex; flex-direction:column; align-items:center;
+    padding: 4px 6px;
+    border-right: 1px solid var(--divider);
+  }
+  .stat:nth-child(2n){ border-right:none; }
+  .stat-value{
+    font-size: 26px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat-label{
+    margin-top: 3px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    color: var(--text-faint);
+    text-transform: uppercase;
+  }
+  .brand-pill{
+    margin-top: 18px;
+    align-self: center;
+    display:flex; align-items:center; gap: 12px;
+    background: rgba(0,0,0,0.34);
+    border-radius: 20px;
+    padding: 8px 16px 8px 8px;
+  }
+  .brand-pill img{ width: 34px; height: 34px; border-radius: 8px; display:block; }
+  .brand-pill span{
+    font-family: 'Bebas Neue', 'Inter', sans-serif;
+    font-size: 15px;
+    letter-spacing: 1.2px;
+    line-height: 1.1;
+  }
+
+  .panel{
+    width: 100%;
+    text-align: center;
+  }
+  .panel h1{
+    font-size: 19px;
+    font-weight: 700;
+    margin: 0 0 8px;
+  }
+  .panel p{
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--text-dim);
+    margin: 0 0 22px;
+  }
+  .step{
+    display:none;
+    flex-direction:column;
+    align-items:center;
+    gap: 16px;
+    width:100%;
+  }
+  .step.active{ display:flex; }
+  #g_id_button_wrap{ display:flex; justify-content:center; }
+
+  .confirm-btn{
+    appearance:none; border:none; cursor:pointer;
+    width:100%;
+    padding: 15px 20px;
+    border-radius: 16px;
+    font-family:inherit;
+    font-size: 15px;
+    font-weight: 700;
+    color:#04211d;
+    background: linear-gradient(135deg, var(--glow), #7ce8ff);
+    box-shadow: 0 12px 24px -10px rgba(77,216,255,0.55);
+  }
+  .confirm-btn:disabled{ opacity:0.55; cursor:default; box-shadow:none; }
+  .confirm-btn:active:not(:disabled){ transform: translateY(1px); }
+
+  .signed-in-as{
+    display:flex; align-items:center; gap:10px;
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 14px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: var(--text-dim);
+    width:100%;
+  }
+  .signed-in-as img{ width:28px; height:28px; border-radius:50%; }
+
+  .success-icon{
+    width: 64px; height:64px; border-radius:50%;
+    background: var(--glow-soft);
+    display:flex; align-items:center; justify-content:center;
+    color: var(--glow);
+    font-size: 30px;
+  }
+  .whatsapp-btn{
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    width:100%;
+    padding: 15px 20px;
+    border-radius: 16px;
+    background: #25D366;
+    color:#04211d;
+    font-weight:700;
+    font-size:15px;
+    text-decoration:none;
+  }
+  .error-text{
+    color: var(--danger);
+    font-size: 13px;
+    min-height: 16px;
+  }
+  .footer-note{
+    color: var(--text-faint);
+    font-size: 11px;
+    text-align:center;
+    line-height:1.5;
+  }
+  .footer-note a{ color: var(--text-faint); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="card" id="card">
+    <div id="map"></div>
+    <div class="card-gradient"></div>
+    <div class="card-content">
+      <div>
+        <div class="site-name" id="siteName">Tauchgang</div>
+        <div class="dive-date" id="diveDate"></div>
+      </div>
+      <div class="stat-grid" id="statGrid"></div>
+      <div class="brand-pill">
+        <img src="app_icon.png" alt="" />
+        <span>ERSTELLT MIT<br/>TAUCHLOGBUCH</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div id="stepMissing" class="step">
+      <h1>Link unvollständig</h1>
+      <p>Dieser Link enthält keine gültigen Tauchgangsdaten. Bitte den Link erneut aus der Tauchlogbuch-App anfordern.</p>
+    </div>
+
+    <div id="stepSignIn" class="step">
+      <h1>Diesen Tauchgang bestätigen</h1>
+      <p>Wenn du dabei warst, melde dich kurz mit Google an – deine E-Mail-Adresse wird dabei angezeigt, damit die Bestätigung nachvollziehbar bleibt.</p>
+      <div id="g_id_button_wrap"></div>
+      <div class="error-text" id="signInError"></div>
+    </div>
+
+    <div id="stepConfirm" class="step">
+      <div class="signed-in-as">
+        <img id="userPhoto" src="" alt="" />
+        <span id="userEmail"></span>
+      </div>
+      <button class="confirm-btn" id="confirmBtn">Tauchgang bestätigen</button>
+      <div class="error-text" id="confirmError"></div>
+    </div>
+
+    <div id="stepDone" class="step">
+      <div class="success-icon">✓</div>
+      <h1>Bestätigt</h1>
+      <p>Danke! Bitte sende den Link unten an <span id="ownerHint">die Person, die dich gebeten hat</span> zurück, damit die Bestätigung in der App ankommt.</p>
+      <a class="whatsapp-btn" id="whatsappBtn" href="#" target="_blank" rel="noopener">Per WhatsApp zurücksenden</a>
+    </div>
+  </div>
+
+  <div class="footer-note">
+    Kartendaten © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>-Mitwirkende ·
+    <a href="https://jan92lpr.github.io/logbuchapp-legal/datenschutz.html" target="_blank" rel="noopener">Datenschutz</a>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  const WORKER_URL = 'https://tauchlogbuch-verify.jan-eric-leipner.workers.dev/';
+  const GOOGLE_CLIENT_ID = '436788943807-i1iuk6ef1prqr4bgkru1k230fdn2j7qi.apps.googleusercontent.com';
+
+  const params = new URLSearchParams(location.search);
+  const diveUuid = params.get('d');
+  const buddyUuid = params.get('b');
+  const siteName = params.get('site');
+  const lat = parseFloat(params.get('lat'));
+  const lng = parseFloat(params.get('lng'));
+  const dateStr = params.get('date');
+  const depth = params.get('depth');
+  const avgDepth = params.get('avgDepth');
+  const duration = params.get('duration');
+  const temp = params.get('temp');
+  const ownerName = params.get('owner');
+
+  const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const dataValid = diveUuid && buddyUuid && uuidRe.test(diveUuid) && uuidRe.test(buddyUuid);
+
+  function showStep(id) {
+    document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+
+  if (!dataValid) {
+    showStep('stepMissing');
+    return;
+  }
+
+  document.getElementById('siteName').textContent = siteName || 'Unbenannter Tauchplatz';
+  if (dateStr) {
+    const d = new Date(dateStr);
+    if (!isNaN(d)) {
+      document.getElementById('diveDate').textContent = d.toLocaleDateString('de-DE', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+      });
+    }
+  }
+  if (ownerName) {
+    document.getElementById('ownerHint').textContent = ownerName;
+  }
+
+  const stats = [];
+  if (depth) stats.push({ value: parseFloat(depth).toFixed(1) + ' m', label: 'Max. Tiefe' });
+  if (avgDepth) stats.push({ value: parseFloat(avgDepth).toFixed(1) + ' m', label: 'Ø-Tiefe' });
+  if (duration) stats.push({ value: Math.round(duration) + ' min', label: 'Tauchzeit' });
+  if (temp) stats.push({ value: Math.round(temp) + '°C', label: 'Wassertemp.' });
+  const statGrid = document.getElementById('statGrid');
+  stats.forEach(s => {
+    const el = document.createElement('div');
+    el.className = 'stat';
+    el.innerHTML = '<div class="stat-value">' + s.value + '</div><div class="stat-label">' + s.label + '</div>';
+    statGrid.appendChild(el);
+  });
+
+  // Kartenhintergrund: dieselbe OSM-Kachelquelle wie in der App (siehe
+  // Datenschutzerklärung), bewusst ohne Interaktion -- die Karte soll wie
+  // ein Foto im Story-Bild-Stil wirken, nicht bedienbar sein.
+  if (!isNaN(lat) && !isNaN(lng)) {
+    const map = L.map('map', {
+      center: [lat, lng],
+      zoom: 13,
+      zoomControl: false,
+      dragging: false,
+      scrollWheelZoom: false,
+      doubleClickZoom: false,
+      boxZoom: false,
+      keyboard: false,
+      touchZoom: false,
+      attributionControl: true,
+    });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 17,
+      attribution: '&copy; OpenStreetMap',
+    }).addTo(map);
+    L.circleMarker([lat, lng], {
+      radius: 9,
+      color: '#4dd8ff',
+      weight: 2,
+      fillColor: '#4dd8ff',
+      fillOpacity: 0.55,
+    }).addTo(map);
+  } else {
+    document.getElementById('map').remove();
+  }
+
+  showStep('stepSignIn');
+
+  let idToken = null;
+
+  function decodeJwt(token) {
+    const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    return JSON.parse(decodeURIComponent(atob(base64).split('').map(c =>
+      '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+    ).join('')));
+  }
+
+  function onGoogleSignIn(response) {
+    idToken = response.credential;
+    let claims;
+    try {
+      claims = decodeJwt(idToken);
+    } catch (e) {
+      document.getElementById('signInError').textContent = 'Anmeldung konnte nicht gelesen werden.';
+      return;
+    }
+    document.getElementById('userEmail').textContent = claims.email;
+    document.getElementById('userPhoto').src = claims.picture || '';
+    showStep('stepConfirm');
+  }
+  window.onGoogleSignIn = onGoogleSignIn;
+
+  function initGoogle() {
+    if (!window.google || !google.accounts || !google.accounts.id) {
+      setTimeout(initGoogle, 150);
+      return;
+    }
+    google.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: onGoogleSignIn,
+    });
+    google.accounts.id.renderButton(document.getElementById('g_id_button_wrap'), {
+      theme: 'filled_black',
+      size: 'large',
+      shape: 'pill',
+      text: 'signin_with',
+    });
+  }
+  initGoogle();
+
+  document.getElementById('confirmBtn').addEventListener('click', async function () {
+    const btn = this;
+    const errorEl = document.getElementById('confirmError');
+    errorEl.textContent = '';
+    btn.disabled = true;
+    btn.textContent = 'Wird bestätigt …';
+    try {
+      const res = await fetch(WORKER_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken, diveUuid, buddyUuid }),
+      });
+      if (!res.ok) {
+        const msg = await res.text();
+        throw new Error(msg || ('Fehler ' + res.status));
+      }
+      const { payload, signature } = await res.json();
+      const verifyParam = btoa(JSON.stringify({ payload: JSON.parse(payload), signature }));
+      // Dieselbe Domain wie diese Seite (jan92lpr.github.io) -- sobald
+      // Universal Links/App Links eingerichtet sind, oeffnet ein Tap auf
+      // diesen Link direkt die App statt der Webseite. Bis dahin landet man
+      // hier auf einer einfachen Bestaetigungs-Anzeige.
+      const returnUrl = location.origin + location.pathname.replace(/index\.html$/, '') +
+        'return.html?v=' + encodeURIComponent(verifyParam);
+      const waText = 'Ich habe den Tauchgang bestätigt: ' + returnUrl;
+      document.getElementById('whatsappBtn').href = 'https://wa.me/?text=' + encodeURIComponent(waText);
+      showStep('stepDone');
+    } catch (e) {
+      errorEl.textContent = 'Bestätigung fehlgeschlagen: ' + e.message;
+      btn.disabled = false;
+      btn.textContent = 'Tauchgang bestätigen';
+    }
+  });
+})();
+</script>
+</body>
+</html>
