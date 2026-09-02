@@ -90,8 +90,7 @@
     details.innerHTML =
       '<b>Bestätigt von:</b> ' + p.verifiedEmail + '<br/>' +
       '<b>Zeitpunkt:</b> ' + (isNaN(verifiedAt) ? p.verifiedAt : verifiedAt.toLocaleString('de-DE')) + '<br/>' +
-      '<b>Tauchgang-ID:</b> ' + p.diveUuid + '<br/>' +
-      '<b>Tauchpartner-ID:</b> ' + p.buddyUuid;
+      '<b>Verknüpfungs-ID:</b> ' + p.linkUuid;
   } catch (e) {
     details.textContent = 'Bestätigungslink konnte nicht gelesen werden.';
   }

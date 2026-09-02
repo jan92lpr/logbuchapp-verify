@@ -273,8 +273,7 @@
   const GOOGLE_CLIENT_ID = '436788943807-i1iuk6ef1prqr4bgkru1k230fdn2j7qi.apps.googleusercontent.com';
 
   const params = new URLSearchParams(location.search);
-  const diveUuid = params.get('d');
-  const buddyUuid = params.get('b');
+  const linkUuid = params.get('l');
   const siteName = params.get('site');
   const lat = parseFloat(params.get('lat'));
   const lng = parseFloat(params.get('lng'));
@@ -286,7 +285,7 @@
   const ownerName = params.get('owner');
 
   const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  const dataValid = diveUuid && buddyUuid && uuidRe.test(diveUuid) && uuidRe.test(buddyUuid);
+  const dataValid = linkUuid && uuidRe.test(linkUuid);
 
   function showStep(id) {
     document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
@@ -409,7 +408,7 @@
       const res = await fetch(WORKER_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken, diveUuid, buddyUuid }),
+        body: JSON.stringify({ idToken, linkUuid }),
       });
       if (!res.ok) {
         const msg = await res.text();
