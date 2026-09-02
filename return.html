@@ -73,15 +73,19 @@
 <script>
 (function () {
   const params = new URLSearchParams(location.search);
-  const raw = params.get('v');
+  const payloadStr = params.get('p');
+  const signature = params.get('s');
   const details = document.getElementById('details');
-  if (!raw) {
+  if (!payloadStr || !signature) {
     details.textContent = 'Kein gültiger Bestätigungslink.';
     return;
   }
   try {
-    const decoded = JSON.parse(atob(raw));
-    const p = decoded.payload;
+    // payloadStr ist der unveraenderte kanonische JSON-String vom Worker --
+    // JSON.parse hier dient nur der lesbaren Anzeige, nicht der
+    // Signaturpruefung (die passiert spaeter in der App direkt ueber
+    // payloadStr + signature).
+    const p = JSON.parse(payloadStr);
     const verifiedAt = new Date(p.verifiedAt);
     details.innerHTML =
       '<b>Bestätigt von:</b> ' + p.verifiedEmail + '<br/>' +

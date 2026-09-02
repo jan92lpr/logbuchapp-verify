@@ -416,13 +416,19 @@
         throw new Error(msg || ('Fehler ' + res.status));
       }
       const { payload, signature } = await res.json();
-      const verifyParam = btoa(JSON.stringify({ payload: JSON.parse(payload), signature }));
+      // payload bleibt der unveraenderte, kanonische JSON-String vom Worker
+      // (nicht erneut geparst/serialisiert) -- die App prueft die Signatur
+      // byteweise genau ueber diesen String, ein Umweg ueber JSON.parse+
+      // JSON.stringify koennte (auch wenn unwahrscheinlich) ein
+      // abweichendes Ergebnis liefern und die Signatur ungueltig machen.
+      // Einfache Query-Parameter statt verschachteltem JSON-in-JSON, um genau
+      // dieses Risiko von vornherein auszuschliessen.
       // Dieselbe Domain wie diese Seite (jan92lpr.github.io) -- sobald
       // Universal Links/App Links eingerichtet sind, oeffnet ein Tap auf
       // diesen Link direkt die App statt der Webseite. Bis dahin landet man
       // hier auf einer einfachen Bestaetigungs-Anzeige.
       const returnUrl = location.origin + location.pathname.replace(/index\.html$/, '') +
-        'return.html?v=' + encodeURIComponent(verifyParam);
+        'return.html?p=' + encodeURIComponent(payload) + '&s=' + encodeURIComponent(signature);
       const waText = 'Ich habe den Tauchgang bestätigt: ' + returnUrl;
       document.getElementById('whatsappBtn').href = 'https://wa.me/?text=' + encodeURIComponent(waText);
       showStep('stepDone');
