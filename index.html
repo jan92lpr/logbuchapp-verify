@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Tauchgang bestätigen – Tauchlogbuch</title>
+<title>Tauchgang bestätigen – Scubook</title>
 <meta name="robots" content="noindex" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -272,7 +272,7 @@
   <div class="panel">
     <div id="stepMissing" class="step">
       <h1>Link unvollständig</h1>
-      <p>Dieser Link enthält keine gültigen Tauchgangsdaten. Bitte den Link erneut aus der Tauchlogbuch-App anfordern.</p>
+      <p>Dieser Link enthält keine gültigen Tauchgangsdaten. Bitte den Link erneut aus der Scubook-App anfordern.</p>
     </div>
 
     <div id="stepInvalid" class="step">
@@ -308,7 +308,7 @@
     <div id="stepDone" class="step">
       <div class="success-icon">✓</div>
       <h1>Bestätigt</h1>
-      <p>Danke! <span id="ownerHint">Die Person, die dich gebeten hat,</span> bekommt die Bestätigung automatisch in der Tauchlogbuch-App angezeigt. Du kannst diese Seite jetzt schließen.</p>
+      <p>Danke! <span id="ownerHint">Die Person, die dich gebeten hat,</span> bekommt die Bestätigung automatisch in der Scubook-App angezeigt. Du kannst diese Seite jetzt schließen.</p>
     </div>
   </div>
 
@@ -321,7 +321,7 @@
 
 <script>
 (function () {
-  const WORKER_URL = 'https://tauchlogbuch-verify.jan-eric-leipner.workers.dev/';
+  const WORKER_URL = 'https://scubook-verify.jan-eric-leipner.workers.dev/';
   const GOOGLE_CLIENT_ID = '436788943807-i1iuk6ef1prqr4bgkru1k230fdn2j7qi.apps.googleusercontent.com';
 
   const params = new URLSearchParams(location.search);
@@ -540,7 +540,7 @@
         throw new Error(msg || ('Fehler ' + res.status));
       }
       // Der Worker legt die signierte Bestaetigung selbst kurzzeitig ab --
-      // die Tauchlogbuch-App holt sie sich von dort ab. Kein Rueckversand
+      // die Scubook-App holt sie sich von dort ab. Kein Rueckversand
       // per WhatsApp o.ae. mehr noetig.
       showStep('stepDone');
     } catch (e) {
